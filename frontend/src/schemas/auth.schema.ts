@@ -15,7 +15,7 @@ const emailValidation = z
 // Backend yêu cầu: 6 ký tự gồm chữ và số
 const passwordValidation = z
   .string()
-  .min(8, "Mật khẩu phải có ít nhất 6 ký tự")
+  .min(6, "Mật khẩu phải có ít nhất 6 ký tự")
   .regex(/[0-9]/, "Mật khẩu phải có ít nhất 1 số");
 
 // ==========================================

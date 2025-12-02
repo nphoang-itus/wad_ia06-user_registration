@@ -28,8 +28,13 @@ cd wad_ia06-user_registration
 ### 2. Start MongoDB (recommended: Docker)
 
 ```sh
+cd database
 docker-compose up -d
 ```
+
+**Lưu ý:** 
+- Khi chạy `docker-compose up -d`, MongoDB sẽ tự động khởi tạo database, collection và seed dữ liệu mẫu bằng script `init_db.js` trong thư mục `database/mongo-init/`.  
+- Script này chỉ chạy khi container MongoDB được tạo mới (chưa có dữ liệu), hỗ trợ tạo cấu trúc và user mẫu để test ngay.
 
 ### 3. Backend Setup
 
@@ -43,9 +48,9 @@ npm run start:dev
 
 Trước khi thực thi lệnh `npm run start:dev` Nên cấu hình .env cho **docker** và **backend** như sau để đồng bộ:
 
-1. `.env` đặt ở thư mục gốc, cùng cấp với docker-compose.yml (ví dụ minh hoạ):
+1. `.env` đặt ở thư mục database, cùng cấp với docker-compose.yml (ví dụ minh hoạ):
     ```
-    # .env (root)
+    # database/.env
     MONGO_INITDB_ROOT_USERNAME=root
     MONGO_INITDB_ROOT_PASSWORD=mySuperPasswod123
     ```
@@ -58,10 +63,10 @@ Trước khi thực thi lệnh `npm run start:dev` Nên cấu hình .env cho **d
     ```
 
 **Lưu ý:**  
-- Docker sẽ lấy user/pass từ .env ở gốc để tạo MongoDB.
+- Docker sẽ lấy user/pass từ .env trong folder database để tạo MongoDB.
 - Backend sẽ dùng đúng user/pass đó trong `MONGO_URI` để kết nối database.
 - Đảm bảo tên database (`ia03_db`) trong `MONGO_URI` đúng với mong muốn.  
-- Nếu đổi tên user/pass ở .env gốc, phải đổi tương ứng trong .env.
+- Nếu đổi tên user/pass ở `database/.env`, phải đổi tương ứng trong `backend/.env`.
 
 
 - Backend sẽ chạy ở `http://localhost:3000`
@@ -89,4 +94,8 @@ Mở trình duyệt và vào [http://localhost:5173](http://localhost:5173)
 - Để dừng MongoDB:  
   ```sh
   docker-compose down
+  ```
+- Để tạo mới volumn (xoá database cũ)
+  ```sh
+  docker-compose down -v
   ```

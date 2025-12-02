@@ -11,6 +11,7 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
     volumes:
       - mongo_data:/data/db         # Persistence: Mount dữ liệu ra ổ cứng thật để không mất khi tắt Docker
+      - ./mongo-init:/docker-entrypoint-initdb.d:ro   # tự động seed data từ 
 
 volumes:
   mongo_data:                       # Khai báo volume
