@@ -15,7 +15,7 @@ async function bootstrap() {
   // 3. Enable CORS để Frontend React gọi được
   app.enableCors({
     // CHỈ cho phép domain này gọi API
-    origin: process.env.FRONTEND_URL || 'http://localhost:3001',
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
 
     // Chỉ cho phép các HTTP methods này: Đăng nhập/ Đăng ký dùng POST
     methods: ['POST'],

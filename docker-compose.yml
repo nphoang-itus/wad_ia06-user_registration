@@ -7,8 +7,8 @@ services:
     ports:
       - "27017:27017"               # Port Mappaing: Cổng 27017 của máy thật -> 27017 của Container
     environment:
-      MONGO_INITDB_ROOT_USERNAME: root  # (Tùy chọn) User root
-      MONGO_INITDB_ROOT_PASSWORD: 2313032005_ia03_wad # (Tùy chọn) Pass root
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
     volumes:
       - mongo_data:/data/db         # Persistence: Mount dữ liệu ra ổ cứng thật để không mất khi tắt Docker
 
