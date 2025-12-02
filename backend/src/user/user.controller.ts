@@ -8,17 +8,16 @@ import {
   // Delete,
 } from '@nestjs/common';
 import { UserService } from './user.service';
-import { CreateUserDto } from './dto/create-user.dto';
 import { UserDocument } from './entities/user.entity';
-// import { UpdateUserDto } from './dto/update-user.dto';
+import { UserRequestDto } from './dto/user-request.dto';
 
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Post('register')
-  async create(@Body() createUserDto: CreateUserDto) {
-    const user: UserDocument = await this.userService.create(createUserDto);
+  async create(@Body() dto: UserRequestDto) {
+    const user: UserDocument = await this.userService.create(dto);
 
     return {
       message: 'Đăng ký thành công',
@@ -27,6 +26,15 @@ export class UserController {
         _id: user._id,
         createdAt: user.createdAt,
       },
+    };
+  }
+
+  @Post('login')
+  async login(@Body() dto: UserRequestDto) {
+    const user = await this.userService.login(dto);
+    return {
+      message: 'Đăng nhập thành công',
+      user,
     };
   }
 

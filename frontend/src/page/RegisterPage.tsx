@@ -2,39 +2,52 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import axios from "axios";
 import { useForm } from "react-hook-form";
-import { Link, useNavigate } from "react-router-dom";
 import { z } from "zod";
 
-const registerSchema = z.object({
-  email: z
-    .string()
-    .email("Email không hợp lệ")
-    .min(1, "Bắt buộc phải điền Email"),
-  password: z.string().min(6, "Mật khẩu phải có ít nhất 6 ký tự"),
-});
+const registerSchema = z
+  .object({
+    email: z
+      .string()
+      .email("Email không hợp lệ")
+      .min(1, "Vui lòng điền đầy đủ Email"),
+    password: z
+      .string()
+      .min(8, "Mật khẩu phải có ít nhất 8 ký tự")
+      .regex(/^(?=.*[0-9])/, {
+        message: "Mật khẩu phải có ít nhất 1 số",
+      }),
+    confirmPassword: z.string().min(1, "Vui lòng nhập lại mật khẩu"),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Mật khẩu nhập lại không khớp",
+    path: ["confirmPassword"],
+  });
 
 type RegisterFormData = z.infer<typeof registerSchema>;
 
-export default function RegisterPage() {
-  const navigate = useNavigate();
-
-  // 1. Setup React Query Mutation
+export default function RegisterPage({
+  onSwitch,
+  onClose,
+}: {
+  onSwitch?: () => void;
+  onClose?: () => void;
+}) {
   const mutation = useMutation({
-    mutationFn: async (newUser: RegisterFormData) => {
+    mutationFn: async (newUser: { email: string; password: string }) => {
       const response = await axios.post(
         "http://localhost:3000/user/register",
         newUser
       );
       return response.data;
     },
-    onSuccess: (data) => {
-      alert("Đăng ký thành công!");
-      console.log("Server response:", data);
-      navigate("/login");
+
+    onSuccess: () => {
+      alert("Đăng ký thành công");
     },
+
     onError: (error: { response?: { data?: { message?: string } } }) => {
       const message = error.response?.data?.message || "Có lỗi xảy ra";
-      alert(`Đăng ký thất bại: ${message}`);
+      alert(`Đăng ký thất bại. Vui lòng thử lại: ${message}`);
     },
   });
 
@@ -47,87 +60,129 @@ export default function RegisterPage() {
   });
 
   const onSubmit = (data: RegisterFormData) => {
-    // console.log("Dữ liệu form", data);
-    // alert("Validation OK! Chuẩn bị gửi API: " + JSON.stringify(data));
-    mutation.mutate(data);
+    mutation.mutate({
+      email: data.email,
+      password: data.password,
+    });
   };
 
   return (
-    <div className="max-w-md mx-auto mt-10 bg-white p-6 rounded-lg shadow-md border">
-      <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">
-        Đăng Ký Tài Khoản
-      </h2>
-
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        {/* Email Field */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Email
-          </label>
-          <input
-            type="email"
-            {...register("email")} // Đăng ký input này với Hook Form
-            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            placeholder="example@email.com"
-          />
-          {/* Hiển thị lỗi nếu có */}
-          {errors.email && (
-            <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
-          )}
-        </div>
-
-        {/* Password Field */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Mật khẩu
-          </label>
-          <input
-            type="password"
-            {...register("password")}
-            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            placeholder="******"
-          />
-          {errors.password && (
-            <p className="text-red-500 text-sm mt-1">
-              {errors.password.message}
-            </p>
-          )}
-        </div>
-
-        {/* Submit Button */}
+    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
+      <div className="relative bg-white rounded-[32px] shadow-2xl max-w-md w-full px-8 py-10">
+        {/* Close button */}
         <button
-          type="submit"
-          disabled={mutation.isPending} // Disable nút khi đang loading
-          className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white
-            ${
-              mutation.isPending
-                ? "bg-gray-400 cursor-not-allowed"
-                : "bg-blue-600 hover:bg-blue-700"
-            }
-            focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
+          className="absolute top-4 right-4 text-2xl text-gray-400 hover:text-gray-700"
+          onClick={onClose}
+          aria-label="Đóng"
         >
-          {mutation.isPending ? "Đang xử lý..." : "Đăng Ký"}
+          &times;
         </button>
-
-        {/* Hiển thị lỗi chung từ API nếu có */}
-        {mutation.isError && (
-          <div className="p-3 bg-red-100 text-red-700 rounded text-sm text-center">
-            {/* Lấy message lỗi từ error object của axios */}
-            {mutation.error?.response?.data?.message ||
-              "Lỗi không xác định"}
+        {/* Logo */}
+        <div className="flex justify-center mb-4">
+          <img
+            src="https://img.icons8.com/color/96/vietnam-circular.png"
+            alt="Logo"
+            className="w-12 h-12"
+          />
+        </div>
+        {/* Title */}
+        <h2 className="text-2xl font-bold text-center text-gray-900 mb-2">
+          Chào mừng bạn
+        </h2>
+        <p className="text-center text-gray-600 mb-6">
+          Đăng ký để tìm trải nghiệm
+        </p>
+        {/* Form */}
+        <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
+          {/* Email */}
+          <div>
+            <input
+              type="email"
+              placeholder="Email"
+              autoComplete="email"
+              {...register("email")}
+              className={`w-full rounded-xl border ${
+                errors.email ? "border-red-400" : "border-gray-300"
+              } px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-red-400`}
+            />
+            {errors.email && (
+              <p className="text-xs text-red-500 mt-1">
+                {errors.email.message}
+              </p>
+            )}
           </div>
-        )}
-      </form>
-
-      <p className="mt-4 text-center text-sm text-gray-600">
-        Đã có tài khoản?{" "}
-        <Link
-          to="/login"
-          className="font-medium text-blue-600 hover:text-blue-500"
-        >
-          Đăng nhập ngay
-        </Link>
-      </p>
+          {/* Password */}
+          <div>
+            <input
+              type="password"
+              placeholder="Tạo mật khẩu"
+              {...register("password")}
+              className={`w-full rounded-xl border ${
+                errors.password ? "border-red-400" : "border-gray-300"
+              } px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-red-400`}
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Sử dụng ít nhất 8 chữ cái, số
+            </p>
+            {errors.password && (
+              <p className="text-xs text-red-500 mt-1">
+                {errors.password.message}
+              </p>
+            )}
+          </div>
+          {/* Confirm Password */}
+          <div>
+            <input
+              type="password"
+              placeholder="Nhập lại mật khẩu"
+              {...register("confirmPassword")}
+              className={`w-full rounded-xl border ${
+                errors.confirmPassword ? "border-red-400" : "border-gray-300"
+              } px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-red-400`}
+            />
+            {errors.confirmPassword && (
+              <p className="text-xs text-red-500 mt-1">
+                {errors.confirmPassword.message}
+              </p>
+            )}
+          </div>
+          {/* Submit */}
+          <button
+            type="submit"
+            disabled={mutation.isPending}
+            className={`w-full mt-2 py-3 rounded-full text-white font-bold text-lg transition
+              ${
+                mutation.isPending
+                  ? "bg-red-300 cursor-wait"
+                  : "bg-red-600 hover:bg-red-700"
+              }`}
+          >
+            Tiếp tục
+          </button>
+        </form>
+        {/* Policy */}
+        <p className="text-xs text-gray-500 mt-4 text-center">
+          Bằng cách tiếp tục, bạn đồng ý với{" "}
+          <a href="#" className="underline hover:text-red-600">
+            Điều khoản dịch vụ
+          </a>{" "}
+          và xác nhận bạn đã đọc{" "}
+          <a href="#" className="underline hover:text-red-600">
+            Chính sách quyền riêng tư
+          </a>
+          .
+        </p>
+        {/* Đăng nhập link */}
+        <p className="text-sm text-center mt-4">
+          Bạn đã có tài khoản?{" "}
+          <span
+            className="font-bold text-red-600 cursor-pointer hover:underline"
+            onClick={onSwitch}
+          >
+            Đăng nhập
+          </span>
+        </p>
+      </div>
     </div>
   );
 }
