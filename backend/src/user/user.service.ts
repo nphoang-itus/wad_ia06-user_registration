@@ -2,8 +2,9 @@ import {
   ConflictException,
   Injectable,
   InternalServerErrorException,
+  Logger,
+  UnauthorizedException,
 } from '@nestjs/common';
-// import { UpdateUserDto } from './dto/update-user.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { User, UserDocument } from './entities/user.entity';
 import { Model } from 'mongoose';
@@ -13,20 +14,24 @@ import { UserRequestDto } from './dto/user-request.dto';
 
 @Injectable()
 export class UserService {
-  // Dependency Injection: Tiêm User Model vào Service để thao tác DB
+  private readonly logger = new Logger(UserService.name);
+
   constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
 
-  async create(createUserDto: UserRequestDto): Promise<UserDocument> {
+  async create(createUserDto: UserRequestDto): Promise<UserResponseDto> {
     const { email, password } = createUserDto;
+
+    this.logger.log(`Received registration request for email: ${email}`);
 
     // 1. Check email tồn tại
     const existingUser = await this.userModel.findOne({ email });
     if (existingUser) {
-      // Trả về lỗi 409 Conflict
-      throw new ConflictException('Email đã được sử dụng');
+      this.logger.warn(`Registration failed: Email already used (${email})`);
+      throw new ConflictException('Email đã tồn tại');
     }
 
     // 2. Hash Password
+    this.logger.debug(`Hashing password for email: ${email}`);
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
@@ -38,48 +43,54 @@ export class UserService {
 
     // 4. Lưu vào database
     try {
-      return await newUser.save();
-    } catch {
-      throw new InternalServerErrorException(`Lỗi khi lưu vào database`);
+      const savedUser: UserDocument = await newUser.save();
+      this.logger.log(
+        `User created successfully: ${savedUser.email} (id: ${savedUser._id.toString()})`,
+      );
+      return this.mapToResponseDto(savedUser);
+    } catch (error) {
+      this.logger.error(
+        `Failed to create user for email: ${email} - ${error instanceof Error ? error.message : 'Unknown error'}`,
+        error instanceof Error ? error.stack : undefined,
+      );
+      throw new InternalServerErrorException('Lỗi server');
     }
   }
 
   async login(dto: UserRequestDto): Promise<UserResponseDto> {
     const { email, password } = dto;
 
-    // 1. Find user by email, đảm bảo kiểu trả về là UserDocument
-    const user = await this.userModel.findOne({ email });
+    this.logger.log(`Received login request for email: ${email}`);
+
+    // 1. Find user by email
+    const user: UserDocument | null = await this.userModel
+      .findOne({ email })
+      .exec();
 
     if (!user) {
-      throw new ConflictException('Email hoặc mật khẩu không đúng');
+      this.logger.warn(`Login failed: Email not found (${email})`);
+      throw new UnauthorizedException('Sai email hoặc mật khẩu');
     }
 
     // 2. Verify password
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      throw new ConflictException('Email hoặc mật khẩu không đúng');
+      this.logger.warn(`Login failed: Invalid password for email: ${email}`);
+      throw new UnauthorizedException('Sai email hoặc mật khẩu');
     }
 
-    return {
-      email: user.email,
-      _id: user._id.toString(),
-      createdAt: user.createdAt,
-    };
+    this.logger.log(`Login successful for email: ${email}`);
+
+    return this.mapToResponseDto(user);
   }
 
-  // findAll() {
-  //   return `This action returns all user`;
-  // }
-
-  // findOne(id: number) {
-  //   return `This action returns a #${id} user`;
-  // }
-
-  // update(id: number, updateUserDto: UpdateUserDto) {
-  //   return `This action updates a #${id} user`;
-  // }
-
-  // remove(id: number) {
-  //   return `This action removes a #${id} user`;
-  // }
+  // =========== Helper method ===========
+  private mapToResponseDto(user: UserDocument): UserResponseDto {
+    return new UserResponseDto({
+      _id: user._id.toString(),
+      email: user.email,
+      createdAt: user.createdAt,
+      // password tự động bị loại bỏ nhờ @Exclude()
+    });
+  }
 }

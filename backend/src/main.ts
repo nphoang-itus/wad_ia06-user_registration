@@ -13,7 +13,19 @@ async function bootstrap() {
     }),
   );
   // 3. Enable CORS để Frontend React gọi được
-  app.enableCors();
+  app.enableCors({
+    // CHỈ cho phép domain này gọi API
+    origin: process.env.FRONTEND_URL || 'http://localhost:3001',
+
+    // Chỉ cho phép các HTTP methods này: Đăng nhập/ Đăng ký dùng POST
+    methods: ['POST'],
+
+    // Cho phép gửi cookies/authentication headers
+    credentials: true,
+
+    // Chỉ cho phép gửi các headers này
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  });
 
   await app.listen(process.env.PORT ?? 3000);
 }

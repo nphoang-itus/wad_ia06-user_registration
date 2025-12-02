@@ -1,60 +1,67 @@
 import {
   Controller,
-  // Get,
   Post,
   Body,
-  // Patch,
-  // Param,
-  // Delete,
+  Logger,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { UserService } from './user.service';
-import { UserDocument } from './entities/user.entity';
 import { UserRequestDto } from './dto/user-request.dto';
+import { ClassSerializerInterceptor, UseInterceptors } from '@nestjs/common';
+import { UserResponseDto } from './dto/user-response.dto';
 
 @Controller('user')
+@UseInterceptors(ClassSerializerInterceptor)
 export class UserController {
+  private readonly logger = new Logger(UserController.name);
+
   constructor(private readonly userService: UserService) {}
 
   @Post('register')
-  async create(@Body() dto: UserRequestDto) {
-    const user: UserDocument = await this.userService.create(dto);
-
-    return {
-      message: 'Đăng ký thành công',
-      user: {
-        email: user.email,
-        _id: user._id,
-        createdAt: user.createdAt,
-      },
-    };
+  @HttpCode(HttpStatus.CREATED)
+  async register(@Body() dto: UserRequestDto): Promise<UserResponseDto> {
+    this.logger.log(
+      `POST /user/register - Received registration request for email: ${dto.email}`,
+    );
+    try {
+      const user: UserResponseDto = await this.userService.create(dto);
+      this.logger.log(
+        `POST /user/register - Registration successful for email: ${dto.email}`,
+      );
+      return user;
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(
+        `POST /user/register - Registration failed for email: ${dto.email} - ${errorMessage}`,
+      );
+      throw error;
+    }
   }
 
   @Post('login')
+  @HttpCode(HttpStatus.OK)
   async login(@Body() dto: UserRequestDto) {
-    const user = await this.userService.login(dto);
-    return {
-      message: 'Đăng nhập thành công',
-      user,
-    };
+    this.logger.log(
+      `POST /user/login - Received login request for email: ${dto.email}`,
+    );
+    try {
+      const user = await this.userService.login(dto);
+      this.logger.log(
+        `POST /user/login - Login successful for email: ${dto.email}`,
+      );
+      return {
+        message: 'Đăng nhập thành công',
+        user,
+      };
+    } catch (error) {
+      this.logger.error(
+        `POST /user/login - Login failed for email: ${dto.email} - ${
+          error instanceof Error ? error.message : 'Unknown error'
+        }`,
+      );
+      throw error;
+    }
   }
-
-  // @Get()
-  // findAll() {
-  //   return this.userService.findAll();
-  // }
-
-  // @Get(':id')
-  // findOne(@Param('id') id: string) {
-  //   return this.userService.findOne(+id);
-  // }
-
-  // @Patch(':id')
-  // update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-  //   return this.userService.update(+id, updateUserDto);
-  // }
-
-  // @Delete(':id')
-  // remove(@Param('id') id: string) {
-  //   return this.userService.remove(+id);
-  // }
 }
